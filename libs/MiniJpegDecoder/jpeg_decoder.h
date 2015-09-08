@@ -44,10 +44,10 @@
     #pragma warning(disable: 4706) // assignment within conditional
 #endif
 
-#define DEBUG 1
+#define JPEG_DECODER_DEBUG 0
 
-#if DEBUG
-#   define _DebugPrintf(...) printf(__VA_ARGS__)
+#if JPEG_DECODER_DEBUG
+#   define _DebugPrintf(...) printf("[jpeg_decoder]: " __VA_ARGS__)
 #else
 #   define _DebugPrintf(...)
 #endif
@@ -259,8 +259,8 @@ namespace Jpeg
             *out = _Clip(((x3 - x2) >> 14) + 128);  out += stride;
             *out = _Clip(((x7 - x1) >> 14) + 128);
         }
-#if DEBUG
-#   define JPEG_DECODER_THROW(e) do { fprintf(stderr, "%s[%04d]: %s\n", __FILE__, __LINE__, result_string[e]); ctx.error = e; return; } while (0)
+#if JPEG_DECODER_DEBUG
+#   define JPEG_DECODER_THROW(e) do { fprintf(stderr, "[jpeg_decoder]: %s[%04d]: %s\n", __FILE__, __LINE__, result_string[e]); ctx.error = e; return; } while (0)
 #else
 #   define JPEG_DECODER_THROW(e) do { ctx.error = e; return; } while (0)
 #endif
@@ -673,12 +673,12 @@ namespace Jpeg
                 if ((ctx.size < 2) || (ctx.pos[0] != 0xFF)) return SyntaxError;
                 _Skip(2);
                 switch (ctx.pos[-1]) {
-                    case 0xC0: _DecodeSOF();  _DebugPrintf("sof"); break;
-                    case 0xC4: _DecodeDHT();  _DebugPrintf("dht"); break;
-                    case 0xDB: _DecodeDQT();  _DebugPrintf("dqt"); break;
-                    case 0xDD: _DecodeDRI();  _DebugPrintf("dri"); break;
-                    case 0xDA: _DecodeScan(); _DebugPrintf("scan"); break;
-                    case 0xFE: _SkipMarker(); _DebugPrintf("skipm"); break;
+                    case 0xC0: _DecodeSOF();  _DebugPrintf("sof\n"); break;
+                    case 0xC4: _DecodeDHT();  _DebugPrintf("dht\n"); break;
+                    case 0xDB: _DecodeDQT();  _DebugPrintf("dqt\n"); break;
+                    case 0xDD: _DecodeDRI();  _DebugPrintf("dri\n"); break;
+                    case 0xDA: _DecodeScan(); _DebugPrintf("scan\n"); break;
+                    case 0xFE: _SkipMarker(); _DebugPrintf("skipm\n"); break;
                     default:
                         _DebugPrintf("other: %0X\n", ctx.pos[-1]);
                         if (
