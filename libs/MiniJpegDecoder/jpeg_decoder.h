@@ -62,6 +62,8 @@ namespace Jpeg
 {
     class Decoder
     {
+        int begin, end;
+        
     public:
         enum DecodeResult
         {
@@ -76,7 +78,7 @@ namespace Jpeg
 
         // decode the raw data. object is very large, and probably shouldn't
         // go on the stack.
-        Decoder(const unsigned char* data, size_t size, void *(*allocFunc)(size_t) = malloc, void (*freeFunc)(void*) = free);
+        Decoder(const unsigned char* data, size_t size, int begin = 0, int end = 64, void *(*allocFunc)(size_t) = malloc, void (*freeFunc)(void*) = free);
         ~Decoder();
 
         // the result of decode
@@ -430,7 +432,7 @@ namespace Jpeg
                 if (i & 0xFC) JPEG_DECODER_THROW(SyntaxError);
                 ctx.qtavail |= 1 << i;
                 t = &ctx.qtab[i][0];
-                for (i = 0;  i < 64;  ++i)
+                for (i = begin; i < end;  ++i)
                     t[i] = ctx.pos[i + 1];
                 _Skip(65);
             }
@@ -671,7 +673,7 @@ namespace Jpeg
     };
 
 
-inline Decoder::Decoder(const unsigned char* data, size_t size, void *(*allocFunc)(size_t), void (*freeFunc)(void*))
+inline Decoder::Decoder(const unsigned char* data, size_t size, int begin, int end, void *(*allocFunc)(size_t), void (*freeFunc)(void*))
     : AllocMem(allocFunc)
     , FreeMem(freeFunc)
 {
@@ -682,6 +684,13 @@ inline Decoder::Decoder(const unsigned char* data, size_t size, void *(*allocFun
         38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63 };
     memcpy(ZZ, temp, sizeof(ZZ));
     memset(&ctx, 0, sizeof(Context));
+    if(end < begin) {
+        int t = end;
+        end = begin;
+        begin = t;
+    }
+    this->begin = MAX(begin, 0);
+    this->end = MIN(end, 64);
     _Decode(data, size);
 }
 
