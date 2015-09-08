@@ -1,6 +1,10 @@
 #ifndef INCLUDED_JPEG_DECODER_H
 #define INCLUDED_JPEG_DECODER_H
 
+// original of this code from:
+// http://h4ck3r.net/2009/12/02/mini-jpeg-decoder/
+// customized by ISHII 2bit [2bit@backspace.tokyo]
+
 // This is a cosmetic restructing and port to C++ class of 'NanoJPEG', found
 // at http://keyj.s2000.ws/?p=137. It's been made somewhat thread safe in that
 // all context information is pulled into an object, rather than being global
