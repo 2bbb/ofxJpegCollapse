@@ -40,6 +40,23 @@
     #pragma warning(disable: 4706) // assignment within conditional
 #endif
 
+#define DEBUG 1
+
+#if DEBUG
+#   define _DebugPrintf(...) printf(__VA_ARGS__)
+#else
+#   define _DebugPrintf(...)
+#endif
+
+static char const * const result_string[] = {
+    "OK",
+    "NotAJpeg",
+    "Unsupported",   // unsupported format
+    "OutOfMemory",   // out of memory
+    "InternalError", // internal error
+    "SyntaxError",   // syntax error
+    "Internal_Finished", // used internally, will never be reported
+};
 
 namespace Jpeg
 {
@@ -64,6 +81,7 @@ namespace Jpeg
 
         // the result of decode
         DecodeResult GetResult() const;
+        string GetResultString() const;
 
         // all remaining functions below are only valid if GetResult() == OK.
 
@@ -235,9 +253,11 @@ namespace Jpeg
             *out = _Clip(((x3 - x2) >> 14) + 128);  out += stride;
             *out = _Clip(((x7 - x1) >> 14) + 128);
         }
-
-        #define JPEG_DECODER_THROW(e) do { ctx.error = e; return; } while (0)
-
+#if DEBUG
+#   define JPEG_DECODER_THROW(e) do { fprintf(stderr, "%s[%04d]: %s\n", __FILE__, __LINE__, result_string[e]); ctx.error = e; return; } while (0)
+#else
+#   define JPEG_DECODER_THROW(e) do { ctx.error = e; return; } while (0)
+#endif
         inline int _ShowBits(int bits) {
             unsigned char newbyte;
             if (!bits) return 0;
@@ -666,6 +686,7 @@ inline Decoder::Decoder(const unsigned char* data, size_t size, void *(*allocFun
 }
 
 inline Decoder::DecodeResult Decoder::GetResult() const { return ctx.error; }
+inline string Decoder::GetResultString() const { return result_string[ctx.error]; }
 inline int Decoder::GetWidth() const { return ctx.width; }
 inline int Decoder::GetHeight() const { return ctx.height; }
 inline bool Decoder::IsColor() const { return ctx.ncomp != 1; }
