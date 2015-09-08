@@ -2,6 +2,8 @@
 
 we love JPEG.
 
+![Photo](https://github.com/2bbb/ofxJpegCollapse/raw/master/image.png)
+
 ## Notice
 
 now we can load **Baseline JPEG** only
