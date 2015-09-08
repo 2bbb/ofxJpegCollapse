@@ -75,7 +75,7 @@ namespace Jpeg
             SyntaxError,   // syntax error
             Internal_Finished, // used internally, will never be reported
         };
-
+        
         // decode the raw data. object is very large, and probably shouldn't
         // go on the stack.
         Decoder(const unsigned char* data, size_t size, int begin = 0, int end = 64, void *(*allocFunc)(size_t) = malloc, void (*freeFunc)(void*) = free);
@@ -97,7 +97,7 @@ namespace Jpeg
 
         // in bytes
         size_t GetImageSize() const;
-        
+
         //////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////
@@ -318,7 +318,14 @@ namespace Jpeg
             if (ctx.size < 0) ctx.error = SyntaxError;
         }
 
+        inline void _Deskip(int count) {
+            ctx.pos -= count;
+            ctx.size += count;
+            ctx.length += count;
+        }
+        
         inline unsigned short _Decode16(const unsigned char *pos) {
+            while(pos[0] == 0xFF && pos[1] == 0xFF) _Skip(1);
             return (pos[0] << 8) | pos[1];
         }
 
@@ -460,7 +467,7 @@ namespace Jpeg
                 value += ((-1) << bits) + 1;
             return value;
         }
-
+        
         inline void _DecodeBlock(Component* c, unsigned char* out) {
             unsigned char code;
             int value, coef = 0;
@@ -510,7 +517,17 @@ namespace Jpeg
                     if (ctx.rstinterval && !(--rstcount)) {
                         _ByteAlign();
                         i = _GetBits(16);
-                        if (((i & 0xFFF8) != 0xFFD0) || ((i & 7) != nextrst)) JPEG_DECODER_THROW(SyntaxError);
+                        while(i == 0xFFFF) {
+                            _Deskip(1);
+                            i = _GetBits(16);
+                        }
+                        if(i == 0xD9FF) {
+                            ctx.error = OK;
+                            continue;
+                        }
+                        if (((i & 0xFFF8) != 0xFFD0) || ((i & 7) != nextrst)) {
+                            JPEG_DECODER_THROW(SyntaxError);
+                        }
                         nextrst = (nextrst + 1) & 7;
                         rstcount = ctx.rstinterval;
                         for (i = 0;  i < 3;  ++i)
@@ -652,17 +669,22 @@ namespace Jpeg
                 if ((ctx.size < 2) || (ctx.pos[0] != 0xFF)) return SyntaxError;
                 _Skip(2);
                 switch (ctx.pos[-1]) {
-                    case 0xC0: _DecodeSOF();  break;
-                    case 0xC4: _DecodeDHT();  break;
-                    case 0xDB: _DecodeDQT();  break;
-                    case 0xDD: _DecodeDRI();  break;
-                    case 0xDA: _DecodeScan(); break;
-                    case 0xFE: _SkipMarker(); break;
+                    case 0xC0: _DecodeSOF();  _DebugPrintf("sof"); break;
+                    case 0xC4: _DecodeDHT();  _DebugPrintf("dht"); break;
+                    case 0xDB: _DecodeDQT();  _DebugPrintf("dqt"); break;
+                    case 0xDD: _DecodeDRI();  _DebugPrintf("dri"); break;
+                    case 0xDA: _DecodeScan(); _DebugPrintf("scan"); break;
+                    case 0xFE: _SkipMarker(); _DebugPrintf("skipm"); break;
                     default:
-                        if ((ctx.pos[-1] & 0xF0) == 0xE0)
+                        _DebugPrintf("other: %0X\n", ctx.pos[-1]);
+                        if (
+                            (ctx.pos[-1] & 0xF0) == 0xE0
+                            || (ctx.pos[-1] & 0xF0) == 0xF0 // (ctx.pos[-1] & 0xF0) == 0xE0 JPGn
+                        ) {
                             _SkipMarker();
-                        else
+                        } else {
                             return Unsupported;
+                        }
                 }
             }
             if (ctx.error != Internal_Finished) return ctx.error;
